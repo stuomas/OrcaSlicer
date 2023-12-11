@@ -23,6 +23,7 @@ wxEND_EVENT_TABLE()
 
 wxDEFINE_EVENT(EVT_VCAMERA_SWITCH, wxMouseEvent);
 wxDEFINE_EVENT(EVT_SDCARD_ABSENT_HINT, wxCommandEvent);
+wxDEFINE_EVENT(EVT_CAM_SOURCE_CHANGE, wxCommandEvent);
 
 #define CAMERAPOPUP_CLICK_INTERVAL 20
 
@@ -78,6 +79,31 @@ CameraPopup::CameraPopup(wxWindow *parent)
         top_sizer->Add(0, 0, wxALL, 0);
     }
 
+    // custom IP camera
+    m_custom_camera_input_confirm = new Button(m_panel, _L("Enable"));
+    m_custom_camera_input_confirm->SetBackgroundColor(wxColour(38, 166, 154));
+    m_custom_camera_input_confirm->SetBorderColor(wxColour(38, 166, 154));
+    m_custom_camera_input_confirm->SetTextColor(wxColour(0xFFFFFE));
+    m_custom_camera_input_confirm->SetFont(Label::Body_14);
+    m_custom_camera_input_confirm->SetMinSize(wxSize(FromDIP(90), FromDIP(30)));
+    m_custom_camera_input_confirm->SetPosition(wxDefaultPosition);
+    m_custom_camera_input_confirm->SetCornerRadius(FromDIP(12));
+    m_custom_camera_input = new wxTextCtrl(m_panel, wxID_ANY, "", wxDefaultPosition);
+    m_custom_camera_input->SetFont(Label::Body_14);
+    m_custom_camera_input->SetHint(_L("Hostname or IP"));
+    m_custom_camera_input->SetSize(wxDefaultSize);
+    m_custom_camera_input->SetPosition(wxDefaultPosition);
+    m_custom_camera_hint = new wxStaticText(m_panel, wxID_ANY, _L("Custom camera source:"));
+    m_custom_camera_hint->Wrap(-1);
+    m_custom_camera_hint->SetFont(Label::Head_14);
+    m_custom_camera_hint->SetForegroundColour(TEXT_COL);
+
+    m_custom_camera_input_confirm->Bind(wxEVT_BUTTON, &CameraPopup::on_camera_source_changed, this);
+
+    top_sizer->Add(m_custom_camera_hint, 0, wxALIGN_BOTTOM | wxALIGN_LEFT | wxALL, FromDIP(5));
+    top_sizer->Add(0, 0, wxALL, 0);
+    top_sizer->Add(m_custom_camera_input, 2, wxALIGN_CENTER_VERTICAL | wxALIGN_LEFT | wxEXPAND | wxALL, FromDIP(5));
+    top_sizer->Add(m_custom_camera_input_confirm, 1, wxALIGN_CENTER_VERTICAL | wxALIGN_RIGHT | wxALL, FromDIP(5));
     main_sizer->Add(top_sizer, 0, wxALL, FromDIP(10));
 
     auto url = wxString::Format(L"https://wiki.bambulab.com/%s/software/bambu-studio/virtual-camera", L"en");
@@ -130,6 +156,34 @@ void CameraPopup::sdcard_absent_hint()
     wxCommandEvent evt(EVT_SDCARD_ABSENT_HINT);
     evt.SetEventObject(this);
     GetEventHandler()->ProcessEvent(evt);
+}
+
+std::string CameraPopup::get_custom_url()
+{
+    return m_custom_camera_input->GetValue().ToStdString();
+}
+
+void CameraPopup::on_camera_source_changed(wxCommandEvent &event)
+{
+    if (!m_obj || m_custom_camera_input->IsEmpty())
+        return;
+
+    m_custom_camera_enabled = !m_custom_camera_enabled;
+
+    auto stateColour = m_custom_camera_enabled ? wxColour(170, 0, 0) : wxColour(38, 166, 154);
+    auto stateText   = m_custom_camera_enabled ? "Disable" : "Enable";
+    m_custom_camera_input_confirm->SetBackgroundColor(stateColour);
+    m_custom_camera_input_confirm->SetBorderColor(stateColour);
+    m_custom_camera_input_confirm->SetLabel(_L(stateText));
+
+    wxCommandEvent evt(EVT_CAM_SOURCE_CHANGE);
+    evt.SetEventObject(this);
+    GetEventHandler()->ProcessEvent(evt);
+}
+
+bool CameraPopup::custom_camera_is_enabled()
+{
+    return m_custom_camera_enabled;
 }
 
 void CameraPopup::on_switch_recording(wxCommandEvent& event)

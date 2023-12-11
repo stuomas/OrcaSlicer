@@ -20,6 +20,7 @@ namespace GUI {
 
 wxDECLARE_EVENT(EVT_VCAMERA_SWITCH, wxMouseEvent);
 wxDECLARE_EVENT(EVT_SDCARD_ABSENT_HINT, wxCommandEvent);
+wxDECLARE_EVENT(EVT_CAM_SOURCE_CHANGE, wxCommandEvent);
 
 class CameraPopup : public PopupWindow
 {
@@ -37,6 +38,9 @@ public:
     void check_func_supported(MachineObject* obj);
     void update(bool vcamera_streaming);
 
+    std::string get_custom_url();
+    bool custom_camera_is_enabled();
+
     enum CameraResolution
     {
         RESOLUTION_720P = 0,
@@ -50,6 +54,7 @@ protected:
     void on_switch_recording(wxCommandEvent& event);
     void on_set_resolution();
     void sdcard_absent_hint();
+    void on_camera_source_changed(wxCommandEvent& event);
 
     wxWindow *  create_item_radiobox(wxString title, wxWindow *parent, wxString tooltip, int padding_left);
     void select_curr_radiobox(int btn_idx);
@@ -66,6 +71,10 @@ private:
     SwitchButton* m_switch_recording;
     wxStaticText* m_text_vcamera;
     SwitchButton* m_switch_vcamera;
+    wxStaticText* m_custom_camera_hint;
+    wxTextCtrl* m_custom_camera_input;
+    Button* m_custom_camera_input_confirm;
+    bool m_custom_camera_enabled{ false };
     wxStaticText* m_text_resolution;
     wxWindow* m_resolution_options[RESOLUTION_OPTIONS_NUM];
     wxScrolledWindow *m_panel;

@@ -11,6 +11,7 @@
 #include "wxMediaCtrl2.h"
 
 #include <wx/panel.h>
+#include <wx/mediactrl.h>
 
 #include <boost/thread.hpp>
 #include <boost/thread/condition_variable.hpp>
@@ -30,7 +31,12 @@ namespace GUI {
 class MediaPlayCtrl : public wxPanel
 {
 public:
-    MediaPlayCtrl(wxWindow *parent, wxMediaCtrl2 *media_ctrl, const wxPoint &pos = wxDefaultPosition, const wxSize &size = wxDefaultSize);
+    MediaPlayCtrl(wxWindow*          parent,
+                  wxMediaCtrl2*      media_ctrl,
+                  wxMediaCtrl2*      media_ctrl_custom,
+                  const wxPoint&     pos       = wxDefaultPosition,
+                  const wxSize&      size      = wxDefaultSize,
+                  const std::string& customUrl = std::string());
 
     ~MediaPlayCtrl();
 
@@ -42,14 +48,18 @@ public:
 
     void msw_rescale();
 
+    void addCustomCam(const std::string& url);
+
 protected:
     void onStateChanged(wxMediaEvent & event);
+    void onStateChangedCustomCamera(wxMediaEvent & event);
 
     void Play();
 
     void Stop(wxString const &msg = {});
 
     void TogglePlay();
+    void TogglePlayCustomCamera();
 
     void SetStatus(wxString const &msg, bool hyperlink = true);
 
@@ -71,6 +81,8 @@ private:
     static constexpr wxMediaState MEDIASTATE_BUFFERING = (wxMediaState) 6;
 
     wxMediaCtrl2 * m_media_ctrl;
+    wxMediaCtrl2 * m_media_ctrl_custom;
+
     wxMediaState m_last_state = MEDIASTATE_IDLE;
     std::string m_machine;
     int m_lan_proto = 0;
@@ -85,7 +97,7 @@ private:
     bool m_device_busy = false;
     bool m_disable_lan = false;
     wxString m_url;
-    
+
     std::deque<wxString> m_tasks;
     boost::mutex m_mutex;
     boost::condition_variable m_cond;
@@ -101,6 +113,9 @@ private:
 
     ::Button *m_button_play;
     ::Label * m_label_status;
+
+    wxString m_custom_url;
+    bool m_custom_url_initial_loaded;
 };
 
 }}

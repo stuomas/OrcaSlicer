@@ -21,6 +21,7 @@ public:
     ~wxMediaCtrl2();
 
     void Load(wxURI url);
+    void LoadDirect(wxURI url);
 
     void Play();
 
@@ -58,6 +59,7 @@ public:
     wxMediaCtrl2(wxWindow *parent);
 
     void Load(wxURI url);
+    void LoadDirect(wxURI url);
 
     void Play();
 

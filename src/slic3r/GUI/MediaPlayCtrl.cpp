@@ -22,12 +22,18 @@
 namespace Slic3r {
 namespace GUI {
 
-MediaPlayCtrl::MediaPlayCtrl(wxWindow *parent, wxMediaCtrl2 *media_ctrl, const wxPoint &pos, const wxSize &size)
+MediaPlayCtrl::MediaPlayCtrl(wxWindow*          parent,
+                             wxMediaCtrl2*      media_ctrl,
+                             wxMediaCtrl2*      media_ctrl_custom,
+                             const wxPoint&     pos,
+                             const wxSize&      size,
+                             const std::string& customUrl)
     : wxPanel(parent, wxID_ANY, pos, size)
     , m_media_ctrl(media_ctrl)
+    , m_media_ctrl_custom(media_ctrl_custom)
+    , m_custom_url(customUrl)
 {
     SetBackgroundColour(*wxWHITE);
-    m_media_ctrl->Bind(wxEVT_MEDIA_STATECHANGED, &MediaPlayCtrl::onStateChanged, this);
 
     m_button_play = new Button(this, "", "media_play", wxBORDER_NONE);
     m_button_play->SetCanFocus(false);
@@ -35,7 +41,6 @@ MediaPlayCtrl::MediaPlayCtrl(wxWindow *parent, wxMediaCtrl2 *media_ctrl, const w
     m_label_status = new Label(this, "");
     m_label_status->SetForegroundColour(wxColour("#323A3C"));
 
-    m_button_play->Bind(wxEVT_COMMAND_BUTTON_CLICKED, [this](auto &e) { TogglePlay(); });
     m_button_play->Bind(wxEVT_RIGHT_UP, [this](auto & e) { m_media_ctrl->Play(); });
     m_label_status->Bind(wxEVT_LEFT_UP, [this](auto &e) {
         auto url = wxString::Format(L"https://wiki.bambulab.com/%s/software/bambu-studio/faq/live-view", L"en");
@@ -66,6 +71,12 @@ MediaPlayCtrl::MediaPlayCtrl(wxWindow *parent, wxMediaCtrl2 *media_ctrl, const w
     sizer->Add(m_label_status, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(25));
     SetSizer(sizer);
 
+    m_media_ctrl->Bind(wxEVT_MEDIA_STATECHANGED, &MediaPlayCtrl::onStateChanged, this);
+    m_button_play->Bind(wxEVT_COMMAND_BUTTON_CLICKED, [this](auto& e) {
+        e.Skip(true);
+        TogglePlay();
+     });
+
     m_thread = boost::thread([this] {
         media_proc();
     });
@@ -79,6 +90,8 @@ MediaPlayCtrl::MediaPlayCtrl(wxWindow *parent, wxMediaCtrl2 *media_ctrl, const w
 
     m_lan_user = "bblp";
     m_lan_passwd = "bblp";
+
+    TogglePlay();
 }
 
 MediaPlayCtrl::~MediaPlayCtrl()
@@ -91,8 +104,64 @@ MediaPlayCtrl::~MediaPlayCtrl()
     m_thread.join();
 }
 
+void MediaPlayCtrl::addCustomCam(const std::string& url)
+{
+    if (url == m_custom_url)
+        return;
+
+    m_custom_url = url;
+    m_custom_url_initial_loaded = false;
+    m_button_play->Bind(wxEVT_COMMAND_BUTTON_CLICKED, [this](auto& e) {
+        e.Skip(true);
+        TogglePlayCustomCamera();
+    });
+    m_media_ctrl_custom->Bind(wxEVT_MEDIA_STATECHANGED, &MediaPlayCtrl::onStateChangedCustomCamera, this);
+
+    TogglePlayCustomCamera();
+}
+
+void MediaPlayCtrl::TogglePlayCustomCamera()
+{
+    auto state = m_media_ctrl_custom->GetState();
+
+    if (!m_custom_url_initial_loaded || state < 0) {
+        SetStatus(_L("Initializing..."));
+        m_media_ctrl_custom->LoadDirect(m_custom_url);
+        m_custom_url_initial_loaded = false;
+    } else if (state == wxMEDIASTATE_STOPPED && m_custom_url_initial_loaded) {
+        m_media_ctrl_custom->Play();
+    } else if (state == wxMEDIASTATE_PLAYING) {
+        m_media_ctrl_custom->Stop();
+    } else if (state == wxMEDIASTATE_PAUSED) {
+        /* Shouldn't happen? */
+    } else {
+        SetStatus(_L("Initializing..."));
+        m_media_ctrl_custom->LoadDirect(m_custom_url);
+    }
+}
+
+void MediaPlayCtrl::onStateChangedCustomCamera(wxMediaEvent &event)
+{
+    auto state = m_media_ctrl_custom->GetState();
+
+    if (state == wxMEDIASTATE_STOPPED && !m_custom_url_initial_loaded) {
+        m_custom_url_initial_loaded = true;
+        m_media_ctrl_custom->Play();
+    } else if (state == wxMEDIASTATE_PLAYING) {
+        m_button_play->SetIcon("media_stop");
+        SetStatus(_L("Playing..."), false);
+    } else if (state == wxMEDIASTATE_STOPPED) {
+        m_button_play->SetIcon("media_play");
+        SetStatus(_L("Stopped."), false);
+    } else {
+        BOOST_LOG_TRIVIAL(info) << "CUSTOMCAM: onStateChangedCustomCamera: unhandled event: " << state;
+    }
+}
+
 void MediaPlayCtrl::SetMachineObject(MachineObject* obj)
 {
+    if (!m_custom_url.empty()) return;
+
     std::string machine = obj ? obj->dev_id : "";
     if (obj) {
         m_camera_exists  = obj->has_ipcam;
@@ -449,6 +518,7 @@ void MediaPlayCtrl::onStateChanged(wxMediaEvent &event)
         }
     }
     if ((last_state == MEDIASTATE_IDLE || last_state == MEDIASTATE_INITIALIZING) && state == wxMEDIASTATE_STOPPED) { return; }
+
     if ((last_state == wxMEDIASTATE_PAUSED || last_state == wxMEDIASTATE_PLAYING) && state == wxMEDIASTATE_STOPPED) {
         m_failed_code = m_media_ctrl->GetLastError();
         Stop();
@@ -526,7 +596,7 @@ void MediaPlayCtrl::on_show_hide(wxShowEvent &evt)
     m_failed_retry = 0;
     if (m_next_retry.IsValid()) // Try open 2 seconds later, to avoid quick play/stop
         m_next_retry = wxDateTime::Now() + wxTimeSpan::Seconds(2);
-    IsShownOnScreen() ? Play() : Stop();
+
 }
 
 void MediaPlayCtrl::media_proc()

@@ -190,6 +190,11 @@ void wxMediaCtrl2::Load(wxURI url)
 #endif
 }
 
+void wxMediaCtrl2::LoadDirect(wxURI url)
+{
+   wxMediaCtrl::Load(url);
+}
+
 void wxMediaCtrl2::Play() { wxMediaCtrl::Play(); }
 
 void wxMediaCtrl2::Stop()

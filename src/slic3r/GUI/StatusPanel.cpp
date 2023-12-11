@@ -1011,14 +1011,20 @@ wxBoxSizer *StatusBasePanel::create_monitoring_page()
 //    media_ctrl_panel              = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
 //    media_ctrl_panel->SetBackgroundColour(*wxBLACK);
 //    wxBoxSizer *bSizer_monitoring = new wxBoxSizer(wxVERTICAL);
-    m_media_ctrl = new wxMediaCtrl2(this);
-    m_media_ctrl->SetMinSize(wxSize(PAGE_MIN_WIDTH, FromDIP(288)));
 
-    m_media_play_ctrl = new MediaPlayCtrl(this, m_media_ctrl, wxDefaultPosition, wxSize(-1, FromDIP(40)));
+    m_media_ctrl = new wxMediaCtrl2(this);
+    m_media_ctrl_custom = new wxMediaCtrl2(this);
+    m_media_ctrl->SetMinSize(wxSize(PAGE_MIN_WIDTH, FromDIP(288)));
+    m_media_ctrl_custom->SetMinSize(wxSize(PAGE_MIN_WIDTH, FromDIP(288)));
+
+    m_media_play_ctrl = new MediaPlayCtrl(this, m_media_ctrl, m_media_ctrl_custom, wxDefaultPosition, wxSize(-1, FromDIP(40)));
 
     sizer->Add(m_media_ctrl, 1, wxEXPAND | wxALL, 0);
+    sizer->Add(m_media_ctrl_custom, 1, wxEXPAND | wxALL, 0);
     sizer->Add(m_media_play_ctrl, 0, wxEXPAND | wxALL, 0);
-//    media_ctrl_panel->SetSizer(bSizer_monitoring);
+
+    m_media_ctrl_custom->Hide();
+    //    media_ctrl_panel->SetSizer(bSizer_monitoring);
 //    media_ctrl_panel->Layout();
 //
 //    sizer->Add(media_ctrl_panel, 1, wxEXPAND | wxALL, 1);
@@ -3863,6 +3869,19 @@ void StatusPanel::on_camera_enter(wxMouseEvent& event)
             }
             sdcard_hint_dlg->on_show();
             });
+        m_camera_popup->Bind(EVT_CAM_SOURCE_CHANGE, [=](auto &e) {
+            auto custom_url = m_camera_popup->get_custom_url();
+            auto enabled = m_camera_popup->custom_camera_is_enabled();
+
+            if (!enabled || custom_url.empty()) {
+                m_media_ctrl_custom->Hide();
+                m_media_ctrl->Show();
+            } else {
+                m_media_play_ctrl->addCustomCam(custom_url);
+                m_media_ctrl->Hide();
+                m_media_ctrl_custom->Show();
+            }
+        });
         wxWindow* ctrl = (wxWindow*)event.GetEventObject();
         wxPoint   pos = ctrl->ClientToScreen(wxPoint(0, 0));
         wxSize    sz = ctrl->GetSize();

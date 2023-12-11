@@ -310,6 +310,7 @@ protected:
 
 
     wxMediaCtrl2 *  m_media_ctrl;
+    wxMediaCtrl2 *  m_media_ctrl_custom;
     MediaPlayCtrl * m_media_play_ctrl;
 
     Label *         m_staticText_printing;
