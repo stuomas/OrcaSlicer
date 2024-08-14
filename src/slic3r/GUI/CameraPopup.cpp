@@ -115,6 +115,10 @@ CameraPopup::CameraPopup(wxWindow *parent)
     m_custom_camera_hint->SetFont(Label::Head_14);
     m_custom_camera_hint->SetForegroundColour(TEXT_COL);
 
+    m_custom_camera_input->GetTextCtrl()->Bind(wxEVT_SET_FOCUS, [this](wxFocusEvent& e) {
+        e.Skip();
+    });
+
     m_custom_camera_input_confirm->Bind(wxEVT_BUTTON, &CameraPopup::on_camera_source_changed, this);
 
     if (!wxGetApp().app_config->get("camera", "custom_source").empty()) {
